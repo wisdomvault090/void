@@ -21,13 +21,17 @@ const store = {
   }
 };
 
-const goTo = (target) =>
+const goTo = (target) => {
   gsap.to(window, {
-    scrollTo: { y: target, autoKill: true },
-    duration: RM ? 0 : 1.5,
-    ease: 'power4.inOut'
+    scrollTo: {
+      y: target,
+      autoKill: false
+    },
+    duration: RM ? 0 : 2,
+    ease: 'power3.inOut',
+    overwrite: 'auto'
   });
-
+};
 /* ==========================================================
    GAME REGISTRY
    To add a game: push one entry here and write a mount function.
