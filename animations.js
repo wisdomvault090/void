@@ -1302,8 +1302,6 @@ if (!RM) {
    CTA GLASS REFLECTION
    ========================================================== */
 
-const cta =
-  $('#cta');
 
 
 cta.addEventListener(
