@@ -134,9 +134,10 @@ b {
 }
 
 #robot {
-  height: min(44svh, 86vw);
-  width: auto;
-  overflow: visible;
+  width: min(420px, 88vw);
+  height: min(44svh, 420px);
+  display: block;
+  background: transparent;
   will-change: transform;
 }
 
