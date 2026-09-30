@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="style.css">
 
   <!-- Spline 3D Viewer -->
-  <script type="module" src="https://unpkg.com/@splinetool/viewer@1.10.99/build/spline-viewer.js"></script>
+  
 </head>
 
 <body>
@@ -26,11 +26,9 @@
     <div class="wrap" id="wrap">
 
       <!-- NEW 3D SPLINE ROBOT -->
-      <spline-viewer
-        id="robot"
-        url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode">
-      </spline-viewer>
-
+     <div id="robot">
+  <canvas id="robotCanvas"></canvas>
+</div>
       <h1 aria-label="VOID">
         <span class="ch">V</span><span class="ch">O</span><span class="ch">I</span><span class="ch">D</span>
       </h1>
