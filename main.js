@@ -36,10 +36,9 @@ const goTo = (target) => {
       y: y,
       autoKill: false
     },
-    ease: 'power3.inOut',
+    ease: 'power2.out',
     overwrite: true
   });
-};
 };
 /* ==========================================================
    GAME REGISTRY
