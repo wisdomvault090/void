@@ -22,15 +22,24 @@ const store = {
 };
 
 const goTo = (target) => {
+  const element = typeof target === 'string'
+    ? document.querySelector(target)
+    : target;
+
+  if (!element) return;
+
+  const y = element.getBoundingClientRect().top + window.scrollY;
+
   gsap.to(window, {
+    duration: RM ? 0 : 1.8,
     scrollTo: {
-      y: target,
+      y: y,
       autoKill: false
     },
-    duration: RM ? 0 : 2,
     ease: 'power3.inOut',
-    overwrite: 'auto'
+    overwrite: true
   });
+};
 };
 /* ==========================================================
    GAME REGISTRY
