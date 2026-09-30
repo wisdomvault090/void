@@ -31,7 +31,7 @@ const goTo = (target) => {
   const y = element.getBoundingClientRect().top + window.scrollY;
 
   gsap.to(window, {
-    duration: RM ? 0 : 1.8,
+    duration: RM ? 0 : 0.7,
     scrollTo: {
       y: y,
       autoKill: false
