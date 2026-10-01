@@ -1,938 +1,827 @@
-/* ==========================================================
-   VOID — animations.js
-   FUTURISTIC 3D HUMANOID ROBOT
-   Three.js + GSAP
-   ========================================================== */
+/* =========================================================
+   VOID — ROBOT + ANIMATIONS
+   Fitted specifically for:
+   #robot
+   #robotCanvas
+   ========================================================= */
 
-const canvas = $('#robotCanvas');
-const robotContainer = $('#robot');
+gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
-let robotScene;
-let robotCamera;
-let robotRenderer;
+
+/* =========================================================
+   ROBOT
+   ========================================================= */
+
+const robotCanvas = document.getElementById("robotCanvas");
+const robotBox = document.getElementById("robot");
+
+let scene;
+let camera;
+let renderer;
 let robotRoot;
 
 let robotHead;
-let robotNeck;
-let robotTorso;
-
-let leftShoulder;
-let rightShoulder;
+let robotFace;
 let leftArm;
 let rightArm;
-
 let leftForearm;
 let rightForearm;
-
 let leftHand;
 let rightHand;
-
-let visor;
-let reactor;
+let leftEye;
+let rightEye;
+let chestLight;
 
 let robotReady = false;
 
-
-/* ==========================================================
-   MATERIALS
-   ========================================================== */
-
-function createRobotMaterials() {
-
-  const darkMetal = new THREE.MeshStandardMaterial({
-    color: 0x111318,
-    metalness: 0.92,
-    roughness: 0.24
-  });
-
-  const blackMetal = new THREE.MeshStandardMaterial({
-    color: 0x050609,
-    metalness: 0.96,
-    roughness: 0.18
-  });
-
-  const silverMetal = new THREE.MeshStandardMaterial({
-    color: 0x444b55,
-    metalness: 0.95,
-    roughness: 0.2
-  });
-
-  const blueGlow = new THREE.MeshStandardMaterial({
-    color: 0x0a5cff,
-    emissive: 0x0066ff,
-    emissiveIntensity: 4,
-    metalness: 0.2,
-    roughness: 0.15
-  });
-
-  const whiteGlow = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    emissive: 0xffffff,
-    emissiveIntensity: 3,
-    metalness: 0.1,
-    roughness: 0.15
-  });
-
-  return {
-    darkMetal,
-    blackMetal,
-    silverMetal,
-    blueGlow,
-    whiteGlow
-  };
-}
+const pointer = {
+  x: 0,
+  y: 0,
+  targetX: 0,
+  targetY: 0
+};
 
 
-/* ==========================================================
-   BASIC PART HELPERS
-   ========================================================== */
+/* ---------- MATERIALS ---------- */
 
-function box(w, h, d, material) {
+const robotWhite = new THREE.MeshPhysicalMaterial({
+  color: 0xe9edf2,
+  metalness: 0.82,
+  roughness: 0.22,
+  clearcoat: 0.65,
+  clearcoatRoughness: 0.18
+});
 
-  const geometry = new THREE.BoxGeometry(w, h, d);
+const robotDark = new THREE.MeshPhysicalMaterial({
+  color: 0x090d12,
+  metalness: 0.9,
+  roughness: 0.2,
+  clearcoat: 0.7,
+  clearcoatRoughness: 0.15
+});
 
-  const mesh = new THREE.Mesh(
-    geometry,
-    material
-  );
+const robotBlue = new THREE.MeshBasicMaterial({
+  color: 0x65bfff
+});
+
+const robotBlueSoft = new THREE.MeshPhysicalMaterial({
+  color: 0x167dff,
+  emissive: 0x0878ff,
+  emissiveIntensity: 3.5,
+  metalness: 0.2,
+  roughness: 0.2
+});
+
+
+/* ---------- HELPERS ---------- */
+
+function box(w, h, d, material, radius = 0) {
+
+  let geometry;
+
+  if (radius && THREE.CapsuleGeometry) {
+    geometry = new THREE.BoxGeometry(w, h, d);
+  } else {
+    geometry = new THREE.BoxGeometry(w, h, d);
+  }
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
 
   return mesh;
 }
 
 
-function sphere(radius, material, segments = 20) {
+function sphere(radius, material) {
 
-  const geometry = new THREE.SphereGeometry(
-    radius,
-    segments,
-    segments
-  );
-
-  return new THREE.Mesh(
-    geometry,
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(radius, 32, 24),
     material
   );
+
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+
+  return mesh;
 }
 
 
-function cylinder(radiusTop, radiusBottom, height, material, segments = 20) {
+function cylinder(radiusTop, radiusBottom, height, material, segments = 24) {
 
-  const geometry = new THREE.CylinderGeometry(
-    radiusTop,
-    radiusBottom,
-    height,
-    segments
-  );
-
-  return new THREE.Mesh(
-    geometry,
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(
+      radiusTop,
+      radiusBottom,
+      height,
+      segments
+    ),
     material
   );
+
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+
+  return mesh;
 }
 
 
-/* ==========================================================
-   JOINT
-   ========================================================== */
+/* =========================================================
+   BUILD ROBOT
+   ========================================================= */
 
-function makeJoint(materials) {
+function buildRobot() {
 
-  const joint = new THREE.Group();
+  robotRoot = new THREE.Group();
 
-  const outer = sphere(
-    0.25,
-    materials.blackMetal,
-    18
-  );
+  /*
+     Overall robot scale.
+     Everything is deliberately compact so it fits
+     inside the VOID hero instead of taking over screen.
+  */
+  robotRoot.scale.set(1.05, 1.05, 1.05);
 
-  joint.add(outer);
 
-  const glow = sphere(
-    0.12,
-    materials.blueGlow,
-    16
-  );
-
-  joint.add(glow);
-
-  return joint;
-}
-
-
-/* ==========================================================
-   ARM
-   ========================================================== */
-
-function makeArm(side, materials) {
-
-  const shoulder = new THREE.Group();
-
-  const upper = new THREE.Group();
-  const lower = new THREE.Group();
-  const hand = new THREE.Group();
-
-  const upperArmor = box(
-    0.58,
-    1.25,
-    0.62,
-    materials.darkMetal
-  );
-
-  upperArmor.position.y = -0.62;
-
-  upper.add(upperArmor);
-
-
-  /* armor highlight */
-
-  const upperPanel = box(
-    0.38,
-    0.82,
-    0.035,
-    materials.silverMetal
-  );
-
-  upperPanel.position.set(
-    0,
-    -0.58,
-    0.325
-  );
-
-  upper.add(upperPanel);
-
-
-  /* elbow */
-
-  const elbow = makeJoint(materials);
-
-  elbow.position.y = -1.28;
-
-  upper.add(elbow);
-
-
-  const forearmArmor = box(
-    0.52,
-    1.15,
-    0.56,
-    materials.blackMetal
-  );
-
-  forearmArmor.position.y = -0.58;
-
-  lower.add(forearmArmor);
-
-
-  /* forearm energy strip */
-
-  const energy = box(
-    0.08,
-    0.72,
-    0.035,
-    materials.blueGlow
-  );
-
-  energy.position.set(
-    0,
-    -0.56,
-    0.30
-  );
-
-  lower.add(energy);
-
-
-  /* wrist */
-
-  const wrist = makeJoint(materials);
-
-  wrist.position.y = -1.18;
-
-  lower.add(wrist);
-
-
-  /* palm */
-
-  const palm = box(
-    0.5,
-    0.52,
-    0.35,
-    materials.darkMetal
-  );
-
-  palm.position.y = -0.30;
-
-  hand.add(palm);
-
-
-  /* fingers */
-
-  for (let i = -1; i <= 1; i++) {
-
-    const finger = box(
-      0.11,
-      0.42,
-      0.16,
-      materials.blackMetal
-    );
-
-    finger.position.set(
-      i * 0.14,
-      -0.67,
-      0
-    );
-
-    finger.rotation.x = 0.12;
-
-    hand.add(finger);
-  }
-
-
-  /* thumb */
-
-  const thumb = box(
-    0.13,
-    0.32,
-    0.16,
-    materials.blackMetal
-  );
-
-  thumb.position.set(
-    side === 'left' ? 0.30 : -0.30,
-    -0.36,
-    0
-  );
-
-  thumb.rotation.z =
-    side === 'left'
-      ? -0.55
-      : 0.55;
-
-  hand.add(thumb);
-
-
-  shoulder.add(upper);
-
-  upper.add(lower);
-
-  lower.add(hand);
-
-  return {
-    shoulder,
-    upper,
-    lower,
-    hand
-  };
-}
-
-
-/* ==========================================================
-   HEAD
-   ========================================================== */
-
-function makeHead(materials) {
-
-  const head = new THREE.Group();
-
-  const skull = box(
-    1.62,
-    1.55,
-    1.38,
-    materials.blackMetal
-  );
-
-  skull.position.y = 0;
-
-  head.add(skull);
-
-
-  /* jaw */
-
-  const jaw = box(
-    1.28,
-    0.48,
-    1.12,
-    materials.darkMetal
-  );
-
-  jaw.position.set(
-    0,
-    -0.68,
-    0
-  );
-
-  head.add(jaw);
-
-
-  /* visor */
-
-  const visorGeometry =
-    new THREE.BoxGeometry(
-      1.28,
-      0.32,
-      0.08
-    );
-
-  visor = new THREE.Mesh(
-    visorGeometry,
-    materials.blueGlow
-  );
-
-  visor.position.set(
-    0,
-    0.08,
-    0.71
-  );
-
-  head.add(visor);
-
-
-  /* side plates */
-
-  const sideL = box(
-    0.18,
-    0.78,
-    0.9,
-    materials.silverMetal
-  );
-
-  sideL.position.set(
-    -0.86,
-    0,
-    0
-  );
-
-  head.add(sideL);
-
-
-  const sideR = sideL.clone();
-
-  sideR.position.x = 0.86;
-
-  head.add(sideR);
-
-
-  /* top antenna */
-
-  const antenna = cylinder(
-    0.055,
-    0.055,
-    0.35,
-    materials.silverMetal,
-    10
-  );
-
-  antenna.position.y = 0.92;
-
-  head.add(antenna);
-
-
-  const antennaLight = sphere(
-    0.09,
-    materials.blueGlow,
-    12
-  );
-
-  antennaLight.position.y = 1.12;
-
-  head.add(antennaLight);
-
-
-  return head;
-}
-
-
-/* ==========================================================
-   TORSO
-   ========================================================== */
-
-function makeTorso(materials) {
+  /* ---------- TORSO ---------- */
 
   const torso = new THREE.Group();
 
-
-  /* main chest */
-
   const chest = box(
-    2.55,
-    2.55,
-    1.22,
-    materials.darkMetal
+    2.25,
+    2.35,
+    1.15,
+    robotWhite
   );
 
-  chest.position.y = 0;
+  chest.position.y = 3.65;
 
   torso.add(chest);
 
 
-  /* shoulder armor */
+  /* chest center dark panel */
 
-  const shoulderBar = box(
-    3.05,
-    0.42,
-    1.28,
-    materials.blackMetal
+  const chestPanel = box(
+    1.35,
+    1.25,
+    0.08,
+    robotDark
   );
 
-  shoulderBar.position.y = 1.02;
-
-  torso.add(shoulderBar);
-
-
-  /* central chest plate */
-
-  const chestPlate = box(
-    1.48,
-    1.38,
-    0.12,
-    materials.silverMetal
-  );
-
-  chestPlate.position.set(
+  chestPanel.position.set(
     0,
+    3.75,
+    0.62
+  );
+
+  torso.add(chestPanel);
+
+
+  /* chest blue reactor */
+
+  chestLight = sphere(
     0.22,
-    0.66
+    robotBlueSoft
   );
 
-  torso.add(chestPlate);
-
-
-  /* blue chest core */
-
-  const coreOuter = sphere(
-    0.42,
-    materials.blackMetal,
-    24
-  );
-
-  coreOuter.position.set(
+  chestLight.position.set(
     0,
-    0.22,
-    0.78
+    3.75,
+    0.72
   );
 
-  torso.add(coreOuter);
+  torso.add(chestLight);
 
 
-  reactor = sphere(
-    0.23,
-    materials.blueGlow,
-    24
-  );
+  /* small chest lines */
 
-  reactor.position.set(
-    0,
-    0.22,
-    0.99
-  );
+  for (let i = -1; i <= 1; i++) {
 
-  torso.add(reactor);
-
-
-  /* abdominal plates */
-
-  for (let i = 0; i < 3; i++) {
-
-    const plate = box(
-      1.5 - i * 0.08,
-      0.32,
-      0.9,
-      materials.blackMetal
+    const line = box(
+      0.65,
+      0.035,
+      0.025,
+      robotBlue
     );
 
-    plate.position.set(
+    line.position.set(
       0,
-      -0.78 - i * 0.34,
-      0.1
+      3.35 + i * 0.16,
+      0.69
     );
 
-    torso.add(plate);
+    torso.add(line);
   }
 
 
-  return torso;
-}
+  /* ---------- WAIST ---------- */
+
+  const waist = cylinder(
+    0.58,
+    0.72,
+    0.45,
+    robotDark
+  );
+
+  waist.position.y = 2.28;
+
+  torso.add(waist);
 
 
-/* ==========================================================
-   LEGS
-   ========================================================== */
+  robotRoot.add(torso);
 
-function makeLeg(side, materials) {
 
-  const leg = new THREE.Group();
+  /* =======================================================
+     HEAD
+     ======================================================= */
 
-  const thigh = box(
-    0.78,
+  robotHead = new THREE.Group();
+
+  robotHead.position.y = 5.55;
+
+
+  const headShell = box(
+    1.72,
     1.45,
-    0.78,
-    materials.darkMetal
+    1.35,
+    robotWhite
   );
 
-  thigh.position.y = -0.75;
-
-  leg.add(thigh);
+  robotHead.add(headShell);
 
 
-  const knee = makeJoint(materials);
+  /* face visor */
 
-  knee.position.y = -1.52;
-
-  leg.add(knee);
-
-
-  const shin = box(
-    0.68,
-    1.55,
-    0.68,
-    materials.blackMetal
+  robotFace = box(
+    1.36,
+    0.58,
+    0.08,
+    robotDark
   );
 
-  shin.position.y = -2.30;
-
-  leg.add(shin);
-
-
-  const foot = box(
-    0.84,
-    0.42,
-    1.38,
-    materials.darkMetal
-  );
-
-  foot.position.set(
+  robotFace.position.set(
     0,
-    -3.18,
-    0.22
+    -0.05,
+    0.72
   );
 
-  leg.add(foot);
+  robotHead.add(robotFace);
 
 
-  return leg;
-}
+  /* eyes */
 
-
-/* ==========================================================
-   BUILD ROBOT
-   ========================================================== */
-
-function buildRobot() {
-
-  const materials = createRobotMaterials();
-
-  robotRoot = new THREE.Group();
-
-  robotRoot.scale.set(
-    1.05,
-    1.05,
-    1.05
+  leftEye = sphere(
+    0.085,
+    robotBlueSoft
   );
 
-
-  /* torso */
-
-  robotTorso = makeTorso(materials);
-
-  robotTorso.position.y = 1.9;
-
-  robotRoot.add(robotTorso);
-
-
-  /* neck */
-
-  robotNeck = cylinder(
-    0.32,
-    0.38,
-    0.48,
-    materials.blackMetal,
-    20
+  rightEye = sphere(
+    0.085,
+    robotBlueSoft
   );
 
-  robotNeck.position.y = 3.45;
+  leftEye.position.set(
+    -0.36,
+    -0.05,
+    0.79
+  );
 
-  robotRoot.add(robotNeck);
+  rightEye.position.set(
+    0.36,
+    -0.05,
+    0.79
+  );
+
+  robotHead.add(leftEye);
+  robotHead.add(rightEye);
 
 
-  /* head */
+  /* head side panels */
 
-  robotHead = makeHead(materials);
+  const sideL = box(
+    0.15,
+    0.72,
+    0.8,
+    robotDark
+  );
 
-  robotHead.position.y = 4.35;
+  const sideR = sideL.clone();
+
+  sideL.position.set(
+    -0.9,
+    0,
+    0
+  );
+
+  sideR.position.set(
+    0.9,
+    0,
+    0
+  );
+
+  robotHead.add(sideL);
+  robotHead.add(sideR);
+
+
+  /* antenna */
+
+  const antenna = cylinder(
+    0.035,
+    0.035,
+    0.3,
+    robotDark
+  );
+
+  antenna.position.y = 0.85;
+
+  robotHead.add(antenna);
+
+
+  const antennaLight = sphere(
+    0.075,
+    robotBlueSoft
+  );
+
+  antennaLight.position.y = 1.03;
+
+  robotHead.add(antennaLight);
+
 
   robotRoot.add(robotHead);
 
 
-  /* arms */
+  /* =======================================================
+     ARMS
+     ======================================================= */
 
-  const left = makeArm(
-    'left',
-    materials
-  );
+  function createArm(side) {
 
-  const right = makeArm(
-    'right',
-    materials
-  );
+    const arm = new THREE.Group();
+
+    const upper = box(
+      0.58,
+      1.65,
+      0.58,
+      robotWhite
+    );
+
+    upper.position.y = -0.85;
+
+    arm.add(upper);
 
 
-  leftShoulder = left.shoulder;
-  rightShoulder = right.shoulder;
+    const shoulder = sphere(
+      0.42,
+      robotDark
+    );
 
-  leftArm = left.upper;
-  rightArm = right.upper;
+    shoulder.position.y = 0.05;
 
-  leftForearm = left.lower;
-  rightForearm = right.lower;
+    arm.add(shoulder);
 
+
+    const elbow = sphere(
+      0.30,
+      robotDark
+    );
+
+    elbow.position.y = -1.7;
+
+    arm.add(elbow);
+
+
+    const forearm = new THREE.Group();
+
+    forearm.position.y = -1.7;
+
+    const lower = box(
+      0.52,
+      1.55,
+      0.52,
+      robotWhite
+    );
+
+    lower.position.y = -0.78;
+
+    forearm.add(lower);
+
+
+    /* hand */
+
+    const hand = new THREE.Group();
+
+    hand.position.y = -1.58;
+
+
+    const palm = box(
+      0.58,
+      0.5,
+      0.48,
+      robotDark
+    );
+
+    hand.add(palm);
+
+
+    /* fingers */
+
+    for (let i = -1; i <= 1; i++) {
+
+      const finger = box(
+        0.11,
+        0.42,
+        0.12,
+        robotWhite
+      );
+
+      finger.position.set(
+        i * 0.16,
+        -0.4,
+        0.02
+      );
+
+      hand.add(finger);
+    }
+
+
+    /* thumb */
+
+    const thumb = box(
+      0.13,
+      0.35,
+      0.13,
+      robotWhite
+    );
+
+    thumb.position.set(
+      side * 0.34,
+      -0.05,
+      0
+    );
+
+    thumb.rotation.z = side * -0.55;
+
+    hand.add(thumb);
+
+
+    forearm.add(hand);
+    arm.add(forearm);
+
+    arm.position.x = side * 1.48;
+    arm.position.y = 4.35;
+
+    arm.rotation.z = side * 0.08;
+
+    robotRoot.add(arm);
+
+    return {
+      arm,
+      forearm,
+      hand
+    };
+  }
+
+
+  const left = createArm(-1);
+  const right = createArm(1);
+
+  leftArm = left.arm;
+  leftForearm = left.forearm;
   leftHand = left.hand;
+
+  rightArm = right.arm;
+  rightForearm = right.forearm;
   rightHand = right.hand;
 
 
-  leftShoulder.position.set(
-    -1.63,
-    2.78,
-    0
-  );
+  /* =======================================================
+     LEGS
+     ======================================================= */
 
-  rightShoulder.position.set(
-    1.63,
-    2.78,
-    0
-  );
+  function createLeg(side) {
 
+    const leg = new THREE.Group();
 
-  robotRoot.add(leftShoulder);
-  robotRoot.add(rightShoulder);
+    const thigh = box(
+      0.72,
+      1.55,
+      0.72,
+      robotWhite
+    );
 
+    thigh.position.y = -0.8;
 
-  /* legs */
-
-  const leftLeg =
-    makeLeg('left', materials);
-
-  const rightLeg =
-    makeLeg('right', materials);
+    leg.add(thigh);
 
 
-  leftLeg.position.set(
-    -0.72,
-    0.55,
-    0
-  );
+    const knee = sphere(
+      0.32,
+      robotDark
+    );
 
-  rightLeg.position.set(
-    0.72,
-    0.55,
-    0
-  );
+    knee.position.y = -1.65;
+
+    leg.add(knee);
 
 
-  robotRoot.add(leftLeg);
-  robotRoot.add(rightLeg);
+    const shin = box(
+      0.62,
+      1.55,
+      0.62,
+      robotWhite
+    );
+
+    shin.position.y = -2.45;
+
+    leg.add(shin);
 
 
-  robotScene.add(robotRoot);
+    const foot = box(
+      0.72,
+      0.42,
+      1.25,
+      robotDark
+    );
+
+    foot.position.set(
+      0,
+      -3.35,
+      0.18
+    );
+
+    leg.add(foot);
+
+
+    leg.position.x = side * 0.58;
+    leg.position.y = 2.1;
+
+    robotRoot.add(leg);
+
+    return leg;
+  }
+
+
+  createLeg(-1);
+  createLeg(1);
+
+
+  /* ---------- POSITION ---------- */
+
+  robotRoot.position.y = -2.85;
+
+  robotRoot.rotation.y = 0;
+
+  scene.add(robotRoot);
+
+  robotReady = true;
 }
 
 
-/* ==========================================================
-   THREE.JS SCENE
-   ========================================================== */
+/* =========================================================
+   THREE SETUP
+   ========================================================= */
 
 function initRobot() {
 
-  if (!canvas || !robotContainer) return;
+  if (!robotCanvas || !robotBox) return;
 
-  robotScene = new THREE.Scene();
+  scene = new THREE.Scene();
+
+  /*
+     Transparent scene so VOID's black background
+     remains visible.
+  */
+  scene.background = null;
 
 
   /* camera */
 
-  robotCamera =
-    new THREE.PerspectiveCamera(
-      34,
-      robotContainer.clientWidth /
-      robotContainer.clientHeight,
-      0.1,
-      100
-    );
+  camera = new THREE.PerspectiveCamera(
+    35,
+    1,
+    0.1,
+    100
+  );
 
-  robotCamera.position.set(
+  camera.position.set(
     0,
-    1.7,
-    12
+    2.8,
+    14
+  );
+
+  camera.lookAt(
+    0,
+    2.6,
+    0
   );
 
 
   /* renderer */
 
-  robotRenderer =
-    new THREE.WebGLRenderer({
-      canvas,
-      alpha: true,
-      antialias: true,
-      powerPreference: 'high-performance'
-    });
+  renderer = new THREE.WebGLRenderer({
+    canvas: robotCanvas,
+    alpha: true,
+    antialias: true,
+    powerPreference: "high-performance"
+  });
 
-
-  robotRenderer.setPixelRatio(
-    Math.min(
-      window.devicePixelRatio || 1,
-      window.innerWidth < 700 ? 1.2 : 1.6
-    )
+  renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio, 1.7)
   );
 
-
-  robotRenderer.setSize(
-    robotContainer.clientWidth,
-    robotContainer.clientHeight,
-    false
+  renderer.setClearColor(
+    0x000000,
+    0
   );
 
+  renderer.shadowMap.enabled = true;
 
-  /* lighting */
+  renderer.shadowMap.type =
+    THREE.PCFSoftShadowMap;
 
-  const ambient =
-    new THREE.AmbientLight(
-      0xffffff,
-      1.25
-    );
+  renderer.outputEncoding =
+    THREE.sRGBEncoding;
 
-  robotScene.add(ambient);
+  renderer.toneMapping =
+    THREE.ACESFilmicToneMapping;
+
+  renderer.toneMappingExposure = 1.1;
 
 
-  const blueLight =
-    new THREE.PointLight(
-      0x006eff,
-      5,
-      10
-    );
+  /* ---------- LIGHTING ---------- */
+
+  const ambient = new THREE.AmbientLight(
+    0xffffff,
+    1.2
+  );
+
+  scene.add(ambient);
+
+
+  const keyLight = new THREE.DirectionalLight(
+    0xffffff,
+    3
+  );
+
+  keyLight.position.set(
+    5,
+    9,
+    10
+  );
+
+  keyLight.castShadow = true;
+
+  scene.add(keyLight);
+
+
+  const blueLight = new THREE.PointLight(
+    0x1688ff,
+    10,
+    15
+  );
 
   blueLight.position.set(
-    -3,
+    0,
     4,
-    5
-  );
-
-  robotScene.add(blueLight);
-
-
-  const whiteLight =
-    new THREE.PointLight(
-      0xffffff,
-      3,
-      9
-    );
-
-  whiteLight.position.set(
-    3,
-    5,
     4
   );
 
-  robotScene.add(whiteLight);
+  scene.add(blueLight);
 
 
-  const rimLight =
-    new THREE.PointLight(
-      0x0066ff,
-      4,
-      8
-    );
-
-  rimLight.position.set(
-    0,
-    2,
-    -4
+  const rimLight = new THREE.PointLight(
+    0x4db5ff,
+    6,
+    12
   );
 
-  robotScene.add(rimLight);
+  rimLight.position.set(
+    -5,
+    4,
+    -3
+  );
+
+  scene.add(rimLight);
 
 
   buildRobot();
 
-  robotReady = true;
-
   resizeRobot();
+
+  window.addEventListener(
+    "resize",
+    resizeRobot
+  );
+
+
+  /* ---------- MOUSE ---------- */
+
+  window.addEventListener(
+    "pointermove",
+    function (event) {
+
+      pointer.targetX =
+        (event.clientX / window.innerWidth - 0.5) * 2;
+
+      pointer.targetY =
+        (event.clientY / window.innerHeight - 0.5) * 2;
+
+    },
+    { passive: true }
+  );
+
+
+  /* ---------- TOUCH ---------- */
+
+  window.addEventListener(
+    "touchmove",
+    function (event) {
+
+      if (!event.touches[0]) return;
+
+      pointer.targetX =
+        (event.touches[0].clientX /
+          window.innerWidth - 0.5) * 2;
+
+      pointer.targetY =
+        (event.touches[0].clientY /
+          window.innerHeight - 0.5) * 2;
+
+    },
+    { passive: true }
+  );
+
 
   animateRobot();
 }
 
 
-/* ==========================================================
-   RESIZE
-   ========================================================== */
+/* =========================================================
+   RESPONSIVE SIZE
+   ========================================================= */
 
 function resizeRobot() {
 
-  if (!robotReady) return;
+  if (!renderer || !camera || !robotBox) return;
 
   const width =
-    robotContainer.clientWidth;
+    robotBox.clientWidth || 500;
 
   const height =
-    robotContainer.clientHeight;
+    robotBox.clientHeight || 500;
 
-  robotCamera.aspect =
-    width / height;
-
-  robotCamera.updateProjectionMatrix();
-
-
-  robotRenderer.setPixelRatio(
-    Math.min(
-      window.devicePixelRatio || 1,
-      window.innerWidth < 700 ? 1.2 : 1.6
-    )
-  );
-
-
-  robotRenderer.setSize(
+  renderer.setSize(
     width,
     height,
     false
   );
+
+  camera.aspect =
+    width / height;
+
+  camera.updateProjectionMatrix();
+
+
+  /*
+     Keep robot visually similar on all screens.
+  */
+
+  if (window.innerWidth <= 700) {
+
+    robotRoot.scale.set(
+      0.82,
+      0.82,
+      0.82
+    );
+
+    camera.position.z = 15.5;
+
+  } else {
+
+    robotRoot.scale.set(
+      1.05,
+      1.05,
+      1.05
+    );
+
+    camera.position.z = 14;
+  }
+
+  camera.lookAt(
+    0,
+    2.6,
+    0
+  );
 }
 
 
-window.addEventListener(
-  'resize',
-  resizeRobot
-);
+/* =========================================================
+   ROBOT ANIMATION
+   ========================================================= */
 
+const robotClock =
+  new THREE.Clock();
 
-/* ==========================================================
-   MOUSE TRACKING
-   ========================================================== */
-
-let mouseX = 0;
-let mouseY = 0;
-
-let targetX = 0;
-let targetY = 0;
-
-
-window.addEventListener(
-  'pointermove',
-  (e) => {
-
-    mouseX =
-      (e.clientX /
-      window.innerWidth - 0.5) * 2;
-
-    mouseY =
-      (e.clientY /
-      window.innerHeight - 0.5) * 2;
-
-  },
-  { passive: true }
-);
-
-
-/* ==========================================================
-   ROBOT ANIMATION LOOP
-   ========================================================== */
-
-function animateRobot(time = 0) {
+function animateRobot() {
 
   requestAnimationFrame(
     animateRobot
@@ -940,541 +829,392 @@ function animateRobot(time = 0) {
 
   if (!robotReady) return;
 
-
-  const t =
-    time * 0.001;
-
-
-  /* smooth mouse */
-
-  targetX +=
-    (mouseX - targetX) * 0.045;
-
-  targetY +=
-    (mouseY - targetY) * 0.045;
+  const time =
+    robotClock.getElapsedTime();
 
 
-  /* whole robot tracking */
+  /* smooth cursor */
 
-  robotRoot.rotation.y =
-    targetX * 0.22;
+  pointer.x +=
+    (pointer.targetX - pointer.x) * 0.055;
 
-  robotRoot.rotation.x =
-    targetY * 0.055;
+  pointer.y +=
+    (pointer.targetY - pointer.y) * 0.055;
 
 
-  /* head independently tracks cursor */
+  /* ---------- HEAD TRACKING ---------- */
 
   robotHead.rotation.y =
-    targetX * 0.32;
+    pointer.x * 0.38;
 
   robotHead.rotation.x =
-    targetY * 0.16;
+    pointer.y * 0.14;
 
 
-  /* neck */
+  /* ---------- BODY TRACKING ---------- */
 
-  robotNeck.rotation.y =
-    targetX * 0.18;
-
-
-  /* shoulders follow slightly */
-
-  leftShoulder.rotation.z =
-    -0.08 -
-    targetX * 0.06;
-
-  rightShoulder.rotation.z =
-    0.08 -
-    targetX * 0.06;
+  robotRoot.rotation.y +=
+    (
+      pointer.x * 0.10 -
+      robotRoot.rotation.y
+    ) * 0.025;
 
 
-  /* arms idle movement */
-
-  leftArm.rotation.z =
-    Math.sin(t * 1.1) * 0.035;
-
-  rightArm.rotation.z =
-    -Math.sin(t * 1.1) * 0.035;
-
-
-  /* forearms */
-
-  leftForearm.rotation.z =
-    Math.sin(t * 1.4 + 1) * 0.055;
-
-  rightForearm.rotation.z =
-    Math.sin(t * 1.3 + 2) * 0.055;
-
-
-  /* hands subtly react */
-
-  leftHand.rotation.z =
-    Math.sin(t * 1.7) * 0.06;
-
-  rightHand.rotation.z =
-    Math.sin(t * 1.5 + 1) * 0.06;
-
-
-  /* breathing */
+  /* ---------- IDLE BREATHING ---------- */
 
   const breathing =
-    1 +
-    Math.sin(t * 1.7) * 0.008;
-
-  robotTorso.scale.y =
-    breathing;
-
-
-  /* floating */
+    Math.sin(time * 1.7) * 0.025;
 
   robotRoot.position.y =
-    Math.sin(t * 0.75) * 0.06;
+    -2.85 + breathing;
 
 
-  /* reactor pulse */
+  /* ---------- ARM IDLE ---------- */
 
-  if (reactor) {
+  leftArm.rotation.z =
+    -0.08 +
+    Math.sin(time * 1.25) * 0.025;
 
-    const pulse =
-      1 +
-      Math.sin(t * 3.2) * 0.12;
-
-    reactor.scale.setScalar(
-      pulse
-    );
-  }
+  rightArm.rotation.z =
+    0.08 -
+    Math.sin(time * 1.25) * 0.025;
 
 
-  /* visor pulse */
+  leftForearm.rotation.x =
+    Math.sin(time * 1.1) * 0.025;
 
-  if (visor) {
-
-    visor.material.emissiveIntensity =
-      3.4 +
-      Math.sin(t * 2.5) * 0.7;
-  }
+  rightForearm.rotation.x =
+    Math.sin(time * 1.1 + 1) * 0.025;
 
 
-  robotRenderer.render(
-    robotScene,
-    robotCamera
+  /* ---------- CHEST LIGHT ---------- */
+
+  const pulse =
+    0.7 +
+    Math.sin(time * 3) * 0.25;
+
+  chestLight.material.emissiveIntensity =
+    3.5 * pulse;
+
+
+  /* ---------- EYES ---------- */
+
+  leftEye.material.emissiveIntensity =
+    2 + Math.sin(time * 2.5) * 0.4;
+
+  rightEye.material.emissiveIntensity =
+    2 + Math.sin(time * 2.5) * 0.4;
+
+
+  /* ---------- CAMERA FLOAT ---------- */
+
+  camera.position.x +=
+    (
+      pointer.x * 0.55 -
+      camera.position.x
+    ) * 0.018;
+
+  camera.position.y +=
+    (
+      2.8 -
+      pointer.y * 0.25 -
+      camera.position.y
+    ) * 0.018;
+
+  camera.lookAt(
+    0,
+    2.65,
+    0
+  );
+
+
+  renderer.render(
+    scene,
+    camera
   );
 }
 
 
-/* ==========================================================
-   START
-   ========================================================== */
-
-if (window.THREE) {
-  initRobot();
-}
+initRobot();
 
 
-/* ==========================================================
-   HERO PARTICLES
-   ========================================================== */
+/* =========================================================
+   VOID HERO EFFECTS
+   ========================================================= */
 
-const fx =
-  $('#fx');
+/* ---------- HERO LETTER INTRO ---------- */
 
-const ctx =
-  fx.getContext('2d');
+const heroLetters =
+  document.querySelectorAll(".hero .ch");
 
-let cw = 0;
-let ch = 0;
-let dpr = 1;
+if (heroLetters.length) {
 
-let heroVisible = true;
-
-let lastWidth =
-  innerWidth;
-
-
-function sizeCanvas() {
-
-  dpr =
-    Math.min(
-      window.devicePixelRatio || 1,
-      1.5
-    );
-
-  cw =
-    fx.width =
-    innerWidth * dpr;
-
-  ch =
-    fx.height =
-    $('.hero').offsetHeight * dpr;
-}
-
-
-sizeCanvas();
-
-
-window.addEventListener(
-  'resize',
-  () => {
-
-    if (innerWidth !== lastWidth) {
-
-      lastWidth =
-        innerWidth;
-
-      sizeCanvas();
-    }
-
-  }
-);
-
-
-const particles =
-  Array.from(
+  gsap.fromTo(
+    heroLetters,
     {
-      length:
-        innerWidth < 700
-          ? 30
-          : 65
+      y: 80,
+      opacity: 0,
+      rotationX: 70
     },
-    () => ({
-      x: Math.random(),
-      y: Math.random(),
-      r: Math.random() * 1.3 + 0.3,
-      v: Math.random() * 0.0012 + 0.0003,
-      a: Math.random() * 0.5 + 0.2,
-      p: Math.random() * 6
-    })
-  );
-
-
-if (!RM) {
-
-  requestAnimationFrame(
-    function draw(t) {
-
-      if (heroVisible) {
-
-        ctx.clearRect(
-          0,
-          0,
-          cw,
-          ch
-        );
-
-        ctx.fillStyle =
-          '#ffffff';
-
-        for (const p of particles) {
-
-          p.y -=
-            p.v * 0.16;
-
-          if (p.y < 0)
-            p.y = 1;
-
-          ctx.globalAlpha =
-            p.a *
-            (
-              0.55 +
-              0.45 *
-              Math.sin(
-                t / 1400 + p.p
-              )
-            );
-
-          ctx.beginPath();
-
-          ctx.arc(
-            (
-              p.x +
-              Math.sin(
-                t / 4000 + p.p
-              ) * 0.012
-            ) * cw,
-
-            p.y * ch,
-
-            p.r * dpr,
-
-            0,
-            Math.PI * 2
-          );
-
-          ctx.fill();
-        }
-      }
-
-      requestAnimationFrame(draw);
+    {
+      y: 0,
+      opacity: 1,
+      rotationX: 0,
+      duration: 1.15,
+      stagger: 0.08,
+      ease: "power4.out",
+      delay: 0.2
     }
   );
 }
 
 
-/* ==========================================================
-   HERO VISIBILITY
-   ========================================================== */
+/* ---------- SUBTEXT ---------- */
 
-ScrollTrigger.create({
+const heroSub =
+  document.querySelector(".hero .sub");
 
-  trigger: '.hero',
+const heroTiny =
+  document.querySelector(".hero .tiny");
 
-  start: 'top top',
+if (heroSub) {
 
-  end: 'bottom top',
-
-  onToggle: (self) => {
-
-    heroVisible =
-      self.isActive;
-
-  }
-
-});
-
-
-/* ==========================================================
-   INTRO
-   ========================================================== */
-
-if (!RM) {
-
-  gsap.timeline({
-    defaults: {
-      ease: 'power3.out'
+  gsap.fromTo(
+    heroSub,
+    {
+      opacity: 0,
+      y: 25
+    },
+    {
+      opacity: 1,
+      y: 0,
+      duration: 0.8,
+      delay: 0.65,
+      ease: "power3.out"
     }
-  })
+  );
+}
 
-  .from('#robot', {
-    opacity: 0,
-    filter: 'blur(20px)',
-    scale: 0.9,
-    duration: 1.8
-  })
+if (heroTiny) {
 
-  .from('.ch', {
-    opacity: 0,
-    y: 50,
-    filter: 'blur(14px)',
-    stagger: 0.09,
-    duration: 1.1
-  }, '-=0.8')
-
-  .from('.sub, .tiny', {
-    opacity: 0,
-    y: 14,
-    filter: 'blur(8px)',
-    stagger: 0.12,
-    duration: 0.9
-  }, '-=0.6')
-
-  .from('.cta', {
-    opacity: 0,
-    y: 20,
-    scale: 0.9,
-    duration: 0.9
-  }, '-=0.6');
-
-
-  /* hero parallax */
-
-  gsap.to('#wrap', {
-
-    yPercent: -10,
-
-    opacity: 0.15,
-
-    ease: 'none',
-
-    scrollTrigger: {
-      trigger: '.hero',
-      start: 'top top',
-      end: 'bottom top',
-      scrub: true
+  gsap.fromTo(
+    heroTiny,
+    {
+      opacity: 0,
+      y: 20
+    },
+    {
+      opacity: 1,
+      y: 0,
+      duration: 0.8,
+      delay: 0.8,
+      ease: "power3.out"
     }
-
-  });
-
+  );
 }
 
 
-/* ==========================================================
-   CTA GLASS REFLECTION
-   ========================================================== */
+/* ---------- ROBOT ENTRANCE ---------- */
+
+if (robotBox) {
+
+  gsap.fromTo(
+    robotBox,
+    {
+      opacity: 0,
+      scale: 0.92,
+      y: 35
+    },
+    {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      duration: 1.25,
+      delay: 0.15,
+      ease: "power4.out"
+    }
+  );
+}
 
 
+/* =========================================================
+   CTA
+   ========================================================= */
 
-cta.addEventListener(
-  'pointermove',
-  (e) => {
+const animationCta =
+  document.getElementById("cta");
 
-    const r =
-      cta.getBoundingClientRect();
+if (animationCta) {
 
-    cta.style.setProperty(
-      '--mx',
-      (
-        (e.clientX - r.left) /
-        r.width
-      ) * 100 + '%'
-    );
+  animationCta.addEventListener(
+    "mouseenter",
+    () => {
 
-    cta.style.setProperty(
-      '--my',
-      (
-        (e.clientY - r.top) /
-        r.height
-      ) * 100 + '%'
-    );
+      gsap.to(
+        animationCta,
+        {
+          y: -3,
+          scale: 1.025,
+          duration: 0.25,
+          ease: "power2.out"
+        }
+      );
 
-  }
-);
-
-
-cta.addEventListener(
-  'pointerdown',
-  () =>
-    gsap.to(
-      cta,
-      {
-        scale: 0.95,
-        duration: 0.15,
-        ease: 'power2.out'
-      }
-    )
-);
+    }
+  );
 
 
-[
-  'pointerup',
-  'pointerleave',
-  'pointercancel'
-].forEach(
-  (evt) =>
+  animationCta.addEventListener(
+    "mouseleave",
+    () => {
 
-    cta.addEventListener(
-      evt,
-      () =>
-        gsap.to(
-          cta,
-          {
-            scale: 1,
-            duration: 0.6,
-            ease: 'elastic.out(1,.5)',
-            overwrite: 'auto'
-          }
-        )
-    )
-);
+      gsap.to(
+        animationCta,
+        {
+          y: 0,
+          scale: 1,
+          duration: 0.3,
+          ease: "power2.out"
+        }
+      );
+
+    }
+  );
+}
 
 
-/* ==========================================================
-   FEED — ACTIVE DOTS
-   ========================================================== */
+/* =========================================================
+   DOT NAVIGATION
+   ========================================================= */
 
-const navButtons =
-  $$('#dots button');
+const animationNavButtons =
+  document.querySelectorAll("#dots button");
 
+if (animationNavButtons.length) {
 
-$$('.hero, .game')
-.forEach(
-  (section, i) => {
+  animationNavButtons.forEach(
+    button => {
 
-    ScrollTrigger.create({
+      button.addEventListener(
+        "mouseenter",
+        () => {
 
-      trigger: section,
-
-      start: 'top 55%',
-
-      end: 'bottom 55%',
-
-      onToggle: (self) => {
-
-        if (self.isActive) {
-
-          navButtons.forEach(
-            (b, j) =>
-              b.classList.toggle(
-                'on',
-                j === i
-              )
+          gsap.to(
+            button,
+            {
+              scale: 1.25,
+              duration: 0.2,
+              ease: "power2.out"
+            }
           );
 
         }
-
-      }
-
-    });
-
-  }
-);
+      );
 
 
-/* ==========================================================
-   FEED REVEALS
-   ========================================================== */
+      button.addEventListener(
+        "mouseleave",
+        () => {
 
-if (!RM) {
+          gsap.to(
+            button,
+            {
+              scale: 1,
+              duration: 0.2,
+              ease: "power2.out"
+            }
+          );
 
-  $$('.inner')
-  .forEach(
-    (inner) => {
+        }
+      );
 
-      const section =
-        inner.parentElement;
+    }
+  );
+}
 
+
+/* =========================================================
+   FEED / GAME REVEALS
+   ========================================================= */
+
+const feed =
+  document.getElementById("feed");
+
+if (feed) {
+
+  const revealItems =
+    feed.children;
+
+  Array.from(revealItems).forEach(
+    item => {
 
       gsap.fromTo(
-        inner,
-
+        item,
         {
           opacity: 0,
-          scale: 0.92,
-          y: 48,
-          filter: 'blur(14px)'
+          y: 50
         },
-
         {
           opacity: 1,
-          scale: 1,
           y: 0,
-          filter: 'blur(0px)',
-          duration: 1,
-          ease: 'power3.out',
-          clearProps: 'filter',
-
+          duration: 0.85,
+          ease: "power3.out",
           scrollTrigger: {
-            trigger: section,
-            start: 'top 70%',
-            toggleActions:
-              'play none none reverse'
+            trigger: item,
+            start: "top 85%",
+            once: true
           }
-
-        }
-      );
-
-
-      gsap.from(
-        $$('.meta, h2, .desc, .stage, .foot', inner),
-
-        {
-          opacity: 0,
-          y: 18,
-          stagger: 0.08,
-          duration: 0.8,
-          ease: 'power2.out',
-
-          scrollTrigger: {
-            trigger: section,
-            start: 'top 65%',
-            toggleActions:
-              'play none none reverse'
-          }
-
         }
       );
 
     }
   );
+}
 
+
+/* =========================================================
+   HERO PARALLAX
+   ========================================================= */
+
+const heroWrap =
+  document.getElementById("wrap");
+
+if (heroWrap) {
+
+  gsap.to(
+    heroWrap,
+    {
+      y: -70,
+      ease: "none",
+      scrollTrigger: {
+        trigger: ".hero",
+        start: "top top",
+        end: "bottom top",
+        scrub: 1
+      }
+    }
+  );
+}
+
+
+/* =========================================================
+   ROBOT SCROLL FADE
+   ========================================================= */
+
+if (robotBox) {
+
+  gsap.to(
+    robotBox,
+    {
+      opacity: 0,
+      scale: 0.9,
+      ease: "none",
+      scrollTrigger: {
+        trigger: ".hero",
+        start: "35% top",
+        end: "90% top",
+        scrub: 1
+      }
+    }
+  );
 }
