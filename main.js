@@ -126,7 +126,62 @@ const GAMES = [
   }
 
 ];
+/* ==========================================================
+   RENDER GAME FEED
+   ========================================================== */
 
+const feed = $('#feed');
+
+if (feed) {
+
+  GAMES.forEach((game, index) => {
+
+    const section = document.createElement('section');
+
+    section.className = 'game';
+    section.id = 'g-' + game.id;
+
+    section.innerHTML = `
+
+      <div class="game-inner">
+
+        <div class="game-head">
+
+          <span class="game-number">
+            ${String(index + 1).padStart(2, '0')}
+          </span>
+
+          <h2>${game.title}</h2>
+
+          <p>${game.desc}</p>
+
+        </div>
+
+        <div class="game-stage"></div>
+
+        <div class="game-foot"></div>
+
+      </div>
+
+    `;
+
+    feed.appendChild(section);
+
+    if (typeof game.mount === 'function') {
+
+      const stage =
+        $('.game-stage', section);
+
+      const foot =
+        $('.game-foot', section);
+
+      game.mount(stage, foot);
+
+    }
+
+  });
+
+}
 
 /* =========================================================
    FEED / GAME REVEALS
