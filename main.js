@@ -39,10 +39,28 @@ const GAMES = [
   { id: 'reaction',   title: 'Reaction Test',    desc: 'Wait for blue, then tap as fast as you can.',           mount: mountReaction },
   { id: 'memory',     title: 'Memory Challenge', desc: 'Watch the pattern. Repeat it. It grows every round.',   mount: mountMemory },
   { id: 'impossible', title: 'Impossible Button', desc: 'Press the button. It would rather you didn’t.',        mount: mountImpossible },
-  { id: 'soon1',      title: 'Coming soon',      desc: 'A new challenge is being built.' },
-  { id: 'soon2',      title: 'Coming soon',      desc: 'Another one is on the way.' }
-];
 
+  { id: 'stroop',     title: 'Stroop Test',      desc: 'The word says one color. The ink says another. Pick the ink.',            mount: mountStroop },
+  { id: 'onesecond',  title: 'Stop At One Second', desc: 'Start the clock. Stop it at exactly 1.000 seconds.',                    mount: mountOneSecond },
+  { id: 'numbers',    title: 'Number Memory',    desc: 'A number flashes briefly. Type it back. It grows every round.',           mount: mountNumbers },
+  { id: 'hiddendot',  title: 'Hidden Dot',       desc: 'A tiny dot hides on the board. Find it fast.',                            mount: mountHiddenDot },
+  { id: 'oddone',     title: 'Pattern Finder',   desc: 'One symbol is different. Find the odd one out.',                          mount: mountOddOne },
+  { id: 'focus',      title: 'Focus Challenge',  desc: 'Ignore the noise. Tap only the target symbols.',                          mount: mountFocus },
+  { id: 'rhythm',     title: 'Rhythm Tap',       desc: 'Watch the beat, then keep it going. We measure your timing drift.',       mount: mountRhythm },
+  { id: 'lucky',      title: 'Lucky Box',        desc: 'Several boxes. One reward. How long can your luck last?',                 mount: mountLucky },
+  { id: 'sequence',   title: 'Sequence Logic',   desc: 'Find the rule. Predict the next number.',                                 mount: mountSequence },
+  { id: 'colors',     title: 'Color Memory',     desc: 'Colors flash one by one. Repeat them in order.',                          mount: mountColors },
+  { id: 'attention',  title: 'Attention Test',   desc: 'Symbols stream past. React only to the target.',                          mount: mountAttention },
+  { id: 'balance',    title: 'Balance Dot',      desc: 'The dot never stops moving. Keep it inside the ring.',                    mount: mountBalance },
+  { id: 'drag',       title: 'Precision Drag',   desc: 'Drag the dot through the lane without touching the edge.',                mount: mountPrecisionDrag },
+  { id: 'humanai',    title: 'Human Or AI',      desc: 'Read the text. Decide who wrote it.',                                     mount: mountHumanAI },
+  { id: 'illusion',   title: 'Reality Check',    desc: 'Optical illusions built to fool you. Trust the facts, not your eyes.',    mount: mountIllusion },
+  { id: 'fear',       title: 'Fear Meter',       desc: 'Eight questions. One Fear Index. Entertainment only.',                    mount: mountFear },
+  { id: 'final',      title: 'The Final Test',   desc: 'Memory, reaction and logic. One final score.',                            mount: mountFinal },
+  { id: 'decision',   title: 'Decision Lab',     desc: 'Pick between two options. We time every choice.',                         mount: mountDecision },
+  { id: 'observe',    title: 'Observation Race', desc: 'One tile glows, barely. Find it before time runs out.',                   mount: mountObserve },
+  { id: 'reverse',    title: 'Reverse Reaction', desc: 'Tap only when the signal disappears.',                                    mount: mountReverse }
+];
 /* ---------- render the feed ---------- */
 const feed = $('#feed');
 
