@@ -1137,7 +1137,7 @@ if (animationNavButtons.length) {
    FEED / GAME REVEALS
    ========================================================= */
 
-const feed =
+const animationFeed =
   document.getElementById("feed");
 
 if (feed) {
