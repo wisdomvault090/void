@@ -1140,10 +1140,8 @@ if (animationNavButtons.length) {
 const animationFeed =
   document.getElementById("feed");
 
-if (feed) {
-
-  const revealItems =
-    feed.children;
+if (animationFeed) {
+  const revealItems = animationFeed.children;
 
   Array.from(revealItems).forEach(
     item => {
