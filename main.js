@@ -128,7 +128,43 @@ const GAMES = [
 ];
 
 
+/* =========================================================
+   FEED / GAME REVEALS
+   ========================================================= */
 
+const animationFeed =
+  document.getElementById("feed");
+
+if (animationFeed) {
+
+  const revealItems =
+    animationFeed.children;
+
+  Array.from(revealItems).forEach(
+    item => {
+
+      gsap.fromTo(
+        item,
+        {
+          opacity: 0,
+          y: 50
+        },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.85,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: item,
+            start: "top 85%",
+            once: true
+          }
+        }
+      );
+
+    }
+  );
+}
 
 /* ==========================================================
    CTA
