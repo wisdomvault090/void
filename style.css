@@ -425,3 +425,349 @@ h2 {
   html { scroll-snap-type: none; }
   .ring::after { animation: none; }
 }
+/* ==========================================================
+   VOID — games 4–23 (append to the END of style.css,
+   before or after the reduced-motion block — both work)
+   All new classes are namespaced vx-*
+   ========================================================== */
+
+[hidden] { display: none !important; }
+
+/* ---------- panels + type ---------- */
+.vx-box {
+  width: 100%;
+  min-height: clamp(130px, 22svh, 190px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 70%);
+  text-align: center;
+  transition: background 0.15s, box-shadow 0.3s, border-color 0.3s;
+}
+
+.vx-box.vx-sm {
+  min-height: 0;
+  padding: 14px 18px;
+}
+
+.vx-big {
+  font-size: clamp(44px, 12vw, 76px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.vx-mid {
+  font-size: clamp(19px, 4.8vw, 24px);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.03em;
+}
+
+.vx-num {
+  font-size: clamp(26px, 7.5vw, 42px);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.vx-text {
+  font-size: clamp(16px, 4vw, 18px);
+  font-weight: 400;
+  line-height: 1.55;
+  text-align: left;
+}
+
+.vx-box small {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0;
+  color: var(--mut);
+}
+
+.vx-tg { color: #4da3ff; font-size: 1.25em; }
+.vx-sym { font-size: clamp(56px, 16vw, 88px); line-height: 1; }
+.vx-pad { font-variant-numeric: tabular-nums; }
+
+/* ---------- option buttons ---------- */
+.vx-opts {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.vx-opts.c3 { grid-template-columns: repeat(3, 1fr); }
+.vx-opts.c1 { grid-template-columns: 1fr; }
+
+.vx-opt {
+  min-height: 56px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background: var(--glass);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s, box-shadow 0.25s, opacity 0.2s;
+}
+
+.vx-opt.vx-lg { min-height: 92px; font-size: 20px; }
+.vx-opt:hover { background: rgba(255, 255, 255, 0.1); }
+.vx-opt:active { transform: scale(0.97); }
+.vx-opt:disabled:not(.ok):not(.no) { opacity: 0.45; cursor: default; }
+
+.vx-opt.ok {
+  background: var(--ac);
+  border-color: #4da3ff;
+  box-shadow: 0 0 40px rgba(0, 112, 243, 0.6);
+}
+
+.vx-opt.no {
+  background: rgba(255, 255, 255, 0.02);
+  border-style: dashed;
+  color: var(--mut);
+}
+
+/* ---------- input row ---------- */
+.vx-row { width: 100%; display: flex; gap: 10px; align-items: stretch; }
+.vx-row .pill { padding: 14px 24px; }
+
+.vx-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: var(--glass);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--fg);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+
+.vx-input:focus {
+  border-color: var(--ac);
+  box-shadow: 0 0 40px rgba(0, 112, 243, 0.35);
+}
+
+/* ---------- progress bar ---------- */
+.vx-bar {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.vx-bar i {
+  display: block;
+  height: 100%;
+  background: var(--ac);
+  box-shadow: 0 0 12px var(--ac);
+  transform-origin: 0 50%;
+}
+
+/* ---------- square grid (tiles, symbols, boxes) ---------- */
+.vx-grid {
+  --n: 4;
+  width: min(100%, 440px, 44svh);
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  gap: 8px;
+}
+
+.vx-cell {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--glass);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: calc(min(100vw - 40px, 440px, 44svh) / var(--n) * 0.46);
+  font-weight: 600;
+  line-height: 1;
+  transition: background 0.12s, transform 0.12s, opacity 0.2s, box-shadow 0.25s;
+}
+
+.vx-cell:active { transform: scale(0.94); }
+.vx-cell.off { opacity: 0.25; pointer-events: none; }
+.vx-cell.hl { background: rgba(0, 112, 243, var(--hl, 0.4)); }
+
+.vx-cell.win {
+  background: var(--ac);
+  border-color: #4da3ff;
+  box-shadow: 0 0 40px rgba(0, 112, 243, 0.7);
+}
+
+.vx-cell.lose { opacity: 0.35; }
+
+/* ---------- square board (hidden dot, balance, drag) ---------- */
+.vx-board {
+  position: relative;
+  width: min(100%, 440px, 48svh);
+  aspect-ratio: 1;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015) 70%);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.vx-board.live { touch-action: none; cursor: crosshair; }
+
+.vx-cap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--mut);
+  pointer-events: none;
+}
+
+.vx-speck {
+  position: absolute;
+  border-radius: 50%;
+  background: #ffffff;
+  pointer-events: none;
+}
+
+.vx-dot {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%;
+  background: #ffffff;
+  opacity: 0.34;
+  pointer-events: none;
+}
+
+.vx-dot.hint { animation: vxhint 1.1s ease-in-out infinite; }
+
+@keyframes vxhint {
+  50% { opacity: 0.95; box-shadow: 0 0 14px #ffffff; }
+}
+
+/* balance dot */
+.vx-zone {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  background: rgba(0, 112, 243, 0.14);
+  box-shadow: 0 0 50px rgba(0, 112, 243, 0.35);
+  pointer-events: none;
+  will-change: transform;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.vx-zone.out {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.vx-ball {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 22px rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* precision drag */
+.vx-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+.vx-grab {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  cursor: grab;
+  touch-action: none;
+}
+
+.vx-grab::after {
+  content: "";
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--ac);
+  border: 2px solid #9fcbff;
+  box-shadow: 0 0 28px rgba(0, 112, 243, 0.9);
+}
+
+/* ---------- color memory ---------- */
+.vx-swatches { width: 100%; display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+
+.vx-sw {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  transition: transform 0.12s, box-shadow 0.25s;
+}
+
+.vx-sw:active { transform: scale(0.9); }
+.vx-sw:hover { box-shadow: 0 0 22px rgba(255, 255, 255, 0.25); }
+
+.vx-pips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 14px; }
+
+.vx-pip {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  transition: background 0.15s;
+}
+
+/* ---------- illusions + multi-stage view ---------- */
+.vx-ill { padding: 12px; }
+.vx-ill svg { display: block; width: 100%; height: auto; max-height: 34svh; }
+.vx-guide { opacity: 0; }
+
+.vx-view {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+/* ---------- small screens: keep 24 nav dots on screen ---------- */
+@media (max-height: 700px) {
+  .dots { gap: 0; }
+  .dots button { height: 16px; }
+}
