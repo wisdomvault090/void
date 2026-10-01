@@ -61,6 +61,11 @@ const GAMES = [
   { id: 'observe',    title: 'Observation Race', desc: 'One tile glows, barely. Find it before time runs out.',                   mount: mountObserve },
   { id: 'reverse',    title: 'Reverse Reaction', desc: 'Tap only when the signal disappears.',                                    mount: mountReverse }
 ];
+/* ---------- random order on every visit ---------- */
+for (let i = GAMES.length - 1; i > 0; i--) {
+  const j = Math.floor(Math.random() * (i + 1));
+  [GAMES[i], GAMES[j]] = [GAMES[j], GAMES[i]];
+}
 /* ---------- render the feed ---------- */
 const feed = $('#feed');
 
